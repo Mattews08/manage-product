@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "CommonJS",
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "types": ["vue3-toastify/global"]
+  },
+  "include": [
+    "src/**/*", // Includes all files in the src directory
+    "vite.config.ts" // Still includes your Vite config
+  ]
+}
