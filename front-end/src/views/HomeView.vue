@@ -15,16 +15,12 @@
         </Select>
         <div class="relative w-full max-w-md">
           <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></i>
-          <Input
-            type="text"
-            placeholder="Pesquisar produtos..."
-            v-model="searchTerm"
-            class="pl-10 pr-4 py-2 rounded-md bg-background border border-input focus:border-primary focus:outline-none"
-          />
+          <Input type="text" placeholder="Pesquisar produtos..." v-model="searchTerm"
+            class="pl-10 pr-4 py-2 rounded-md bg-background border border-input focus:border-primary focus:outline-none" />
         </div>
       </div>
       <div>
-        <Button size="sm" variant="primary" @click="showRegisterForm = true">
+        <Button size="sm" @click="showRegisterForm = true">
           <i class="pi pi-plus mr-2"></i>
           Adicionar Novo Produto
         </Button>
@@ -55,11 +51,11 @@
             <TableCell>{{ product.category.name }}</TableCell>
             <TableCell>
               <div class="flex items-center gap-2">
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" @click="viewProductDetails(product)">
                   <i class="pi pi-eye mr-2"></i>
                   Visualizar
                 </Button>
-                <Button size="sm" variant="destructive">
+                <Button size="sm" variant="destructive" @click="deleteProduct(product.id)">
                   <i class="pi pi-trash mr-2"></i>
                   Deletar
                 </Button>
@@ -80,18 +76,26 @@
         <Categories />
       </div>
     </div>
+
+    <!-- Modal de Detalhes do Produto -->
+    <DetailsProduct v-if="showDetailsModal" :product="selectedProduct" :productId="selectedProduct?.id"
+      :isModalOpen="showDetailsModal" @close="closeDetailsModal" @update="loadProducts" />
   </div>
 </template>
 
 <script lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import RegisterForm from '@/components/RegisterForm.vue'
-import Categories from '@/components/Categories.vue'
-import api from '@/services/api'
+import { ref, computed, onMounted } from 'vue';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import RegisterForm from '@/components/RegisterForm.vue';
+import Categories from '@/components/Categories.vue';
+import DetailsProduct from '@/components/DetailsProduct.vue';
+import api from '@/services/api';
+import { formatDate } from '@/utils';
+import { Product, Category } from '@/types';
+import { toast } from 'vue3-toastify';
 
 export default {
   components: {
@@ -101,71 +105,79 @@ export default {
     Button,
     RegisterForm,
     Categories,
+    DetailsProduct
   },
   setup() {
-    const selectedCategory = ref("all")
-    const searchTerm = ref("")
-    const showRegisterForm = ref(false)
-    const showCategoriesModal = ref(false)
-    const products = ref([])
-    const categories = ref([])
+    const selectedCategory = ref<string | number>('all');
+    const searchTerm = ref<string>('');
+    const showRegisterForm = ref<boolean>(false);
+    const showCategoriesModal = ref<boolean>(false);
+    const showDetailsModal = ref<boolean>(false);
+    const products = ref<Product[]>([]);
+    const categories = ref<Category[]>([]);
+    const selectedProduct = ref<Product | null>(null);
 
     const closeRegisterForm = () => {
-      showRegisterForm.value = false
-    }
+      showRegisterForm.value = false;
+    };
 
     const closeCategoriesModal = () => {
-      showCategoriesModal.value = false
-    }
+      showCategoriesModal.value = false;
+    };
+
+    const closeDetailsModal = () => {
+      showDetailsModal.value = false;
+    };
 
     const loadProducts = async () => {
       try {
-        const response = await api.getProducts()
-        products.value = response.data
+        const response = await api.getProducts();
+        products.value = response.data;
       } catch (error) {
-        console.error('Erro ao carregar produtos:', error)
+        console.error('Erro ao carregar produtos:', error);
       }
-    }
+    };
 
     const loadCategories = async () => {
       try {
-        const response = await api.getCategories()
-        categories.value = response.data
+        const response = await api.getCategories();
+        categories.value = response.data;
       } catch (error) {
-        console.error('Erro ao carregar categorias:', error)
+        console.error('Erro ao carregar categorias:', error);
       }
-    }
+    };
 
     const filteredProducts = computed(() => {
       return products.value.filter((product) => {
-        if (selectedCategory.value !== "all" && product.category !== selectedCategory.value) {
-          return false
+        if (selectedCategory.value !== 'all' && product.category.id !== selectedCategory.value) {
+          return false;
         }
-        if (searchTerm.value.trim() !== "" && !product.name.toLowerCase().includes(searchTerm.value.toLowerCase())) {
-          return false
+        if (searchTerm.value.trim() !== '' && !product.name.toLowerCase().includes(searchTerm.value.toLowerCase())) {
+          return false;
         }
-        return true
-      })
-    })
+        return true;
+      });
+    });
 
-    const formatDate = (dateStr: string) => {
-      if (!dateStr) {
-        return "Data inválida";
+    const viewProductDetails = (product: Product) => {
+      selectedProduct.value = product;
+      showDetailsModal.value = true;
+    };
+
+    const deleteProduct = async (productId: number) => {
+      try {
+        await api.deleteProduct(productId);
+        loadProducts();
+        toast.success('Produto deletado com sucesso!');
+      } catch (error) {
+        console.error('Erro ao deletar produto:', error);
       }
-
-      const date = new Date(dateStr);
-
-      if (isNaN(date.getTime())) {
-        return "Data inválida";
-      }
-
-      return `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
-    }
+    };
 
     onMounted(() => {
-      loadProducts()
-      loadCategories()
-    })
+      loadProducts();
+      loadCategories();
+    });
 
     return {
       selectedCategory,
@@ -174,10 +186,15 @@ export default {
       formatDate,
       showRegisterForm,
       showCategoriesModal,
+      showDetailsModal,
       closeRegisterForm,
       closeCategoriesModal,
+      closeDetailsModal,
       loadProducts,
-    }
+      viewProductDetails,
+      deleteProduct,
+      selectedProduct,
+    };
   }
-}
+};
 </script>

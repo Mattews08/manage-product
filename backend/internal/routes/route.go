@@ -10,6 +10,8 @@ import (
 func SetupRoutes(app *fiber.App) {
 	app.Post("/login", handlers.Login)
 
+	app.Static("/uploads", "./uploads") // Rota para os arquivos
+
 	app.Get("/products", middleware.AuthMiddleware(), handlers.GetAllProducts)
 	app.Post("/products", middleware.AuthMiddleware(), handlers.CreateProduct)
 	app.Get("/products/:id", middleware.AuthMiddleware(), handlers.GetProduct)
